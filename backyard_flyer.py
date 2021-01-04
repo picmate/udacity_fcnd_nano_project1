@@ -23,14 +23,12 @@ class BackyardFlyer(Drone):
     def __init__(self, connection):
         super().__init__(connection)
         self.target_position = np.array([0.0, 0.0, 0.0])
-        self.all_waypoints = []
+        self.all_waypoints = self.calculate_box() # all_waypoints is a generator
         self.in_mission = True
         self.check_state = {}
 
         # initial state
         self.flight_state = States.MANUAL
-
-        self.path = self.calculate_box()
 
         # TODO: Register all your callbacks here
         self.register_callback(MsgID.LOCAL_POSITION, self.local_position_callback)
@@ -47,15 +45,13 @@ class BackyardFlyer(Drone):
             altitude = -1.0 * self.local_position[2]
 
             if altitude > 0.95 * self.target_position[2]:
-                # self.landing_transition()
                 self.waypoint_transition()
 
-        if self.flight_state == States.WAYPOINT:
-            if self.local_position[0] > 0.95 * self.target_position[0] and self.local_position[1] > 0.95 * self.target_position[1]:
-                # self.landing_transition()
+        elif self.flight_state == States.WAYPOINT:
+            if np.linalg.norm(self.target_position[0:2] - self.local_position[0:2]) < 1.0:
                 self.waypoint_transition()
 
-        if self.flight_state == States.LANDING:
+        elif self.flight_state == States.LANDING:
             if (self.global_position[2] - self.global_home[2] < 0.1) and abs(self.local_position[2]) < 0.01:
                 self.disarming_transition()
 
@@ -90,14 +86,10 @@ class BackyardFlyer(Drone):
         
         1. Return waypoints to fly a box
         """
-        # box = [(10, 0, 3, 0),
-        #        (10, 10, 3, 0),
-        #        (0, 10, 3, 0),
-        #        (0, 0, 3, 0)]
-
         box = [(10, 0, 3, 0),
                (10, 10, 3, 0),
-               (0, 10, 3, 0), ]
+               (0, 10, 3, 0),
+               (0, 0, 3, 0)]
 
         for vertex in box:
             yield vertex
@@ -141,7 +133,7 @@ class BackyardFlyer(Drone):
         print("waypoint transition")
 
         try:
-            next_vertex = next(self.path)
+            next_vertex = next(self.all_waypoints)
             print('Next Waypoint: {}'.format(next_vertex))
 
             target_north, target_east, target_altitude, target_heading = next_vertex
