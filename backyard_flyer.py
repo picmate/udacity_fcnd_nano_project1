@@ -30,6 +30,8 @@ class BackyardFlyer(Drone):
         # initial state
         self.flight_state = States.MANUAL
 
+        self.path = self.calculate_box()
+
         # TODO: Register all your callbacks here
         self.register_callback(MsgID.LOCAL_POSITION, self.local_position_callback)
         self.register_callback(MsgID.LOCAL_VELOCITY, self.velocity_callback)
@@ -45,7 +47,13 @@ class BackyardFlyer(Drone):
             altitude = -1.0 * self.local_position[2]
 
             if altitude > 0.95 * self.target_position[2]:
-                self.landing_transition()
+                # self.landing_transition()
+                self.waypoint_transition()
+
+        if self.flight_state == States.WAYPOINT:
+            if self.local_position[0] > 0.95 * self.target_position[0] and self.local_position[1] > 0.95 * self.target_position[1]:
+                # self.landing_transition()
+                self.waypoint_transition()
 
         if self.flight_state == States.LANDING:
             if (self.global_position[2] - self.global_home[2] < 0.1) and abs(self.local_position[2]) < 0.01:
@@ -82,7 +90,17 @@ class BackyardFlyer(Drone):
         
         1. Return waypoints to fly a box
         """
-        pass
+        # box = [(10, 0, 3, 0),
+        #        (10, 10, 3, 0),
+        #        (0, 10, 3, 0),
+        #        (0, 0, 3, 0)]
+
+        box = [(10, 0, 3, 0),
+               (10, 10, 3, 0),
+               (0, 10, 3, 0), ]
+
+        for vertex in box:
+            yield vertex
 
     def arming_transition(self):
         """TODO: Fill out this method
@@ -121,6 +139,23 @@ class BackyardFlyer(Drone):
         2. Transition to WAYPOINT state
         """
         print("waypoint transition")
+
+        try:
+            next_vertex = next(self.path)
+            print('Next Waypoint: {}'.format(next_vertex))
+
+            target_north, target_east, target_altitude, target_heading = next_vertex
+
+            self.target_position[0] = target_north
+            self.target_position[1] = target_east
+            self.target_position[2] = target_altitude
+
+            self.cmd_position(target_north, target_east, target_altitude, target_heading)
+
+            self.flight_state = States.WAYPOINT
+
+        except StopIteration:
+            self.landing_transition()
 
     def landing_transition(self):
         """TODO: Fill out this method
