@@ -1,7 +1,14 @@
 """
     Solution for Udacity Flying Car Nano Degree Project 1: Backyard Flyer
     By Pathum Mudannayake
-"""
+
+    I didn't implement the velocity_callback method, because I didn't see a reason for that; since the local position
+    updates are more frequent, used the local_position_callback method to handle landing.
+
+    calculate_box returns a generator, adopted this design to handle larger waypoint inputs
+
+    landing_transition is initiated from waypoint_transition when there are no waypoints left in the all_waypoints
+    generator for waypoin_tranition to consume """
 
 import argparse
 import time
